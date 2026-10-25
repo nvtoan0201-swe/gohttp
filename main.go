@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"net"
@@ -21,11 +22,18 @@ func main() {
 	}
 	defer conn.Close()
 
-	buffer := make([]byte, 4096)
-	n, err := conn.Read(buffer)
+	request, err := readRequest(bufio.NewReader(conn))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("received %d bytes:\n%q\n", n, buffer[:n])
+	fmt.Printf("method:  %s\n", request.Method)
+	fmt.Printf("target:  %s\n", request.Target)
+	fmt.Printf("path:    %s\n", request.Path)
+	fmt.Printf("query:   %s\n", request.Query)
+	fmt.Printf("proto:   %s\n", request.Proto)
+	fmt.Println("headers:")
+	for name, value := range request.Headers {
+		fmt.Printf("  %s: %s\n", name, value)
+	}
 }
