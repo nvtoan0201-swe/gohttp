@@ -1,39 +1,48 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
-	"net"
+	"os"
 )
 
 func main() {
-	listener, err := net.Listen("tcp", "127.0.0.1:8080")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer listener.Close()
-
-	fmt.Println("listening on 127.0.0.1:8080")
-
-	conn, err := listener.Accept()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer conn.Close()
-
-	request, err := readRequest(bufio.NewReader(conn))
-	if err != nil {
-		log.Fatal(err)
+	addr := os.Getenv("ADDR")
+	if addr == "" {
+		addr = "127.0.0.1:8080"
 	}
 
-	fmt.Printf("method:  %s\n", request.Method)
-	fmt.Printf("target:  %s\n", request.Target)
-	fmt.Printf("path:    %s\n", request.Path)
-	fmt.Printf("query:   %s\n", request.Query)
-	fmt.Printf("proto:   %s\n", request.Proto)
-	fmt.Println("headers:")
-	for name, value := range request.Headers {
-		fmt.Printf("  %s: %s\n", name, value)
+	logger := log.New(os.Stdout, "http: ", log.LstdFlags)
+	server := NewServer(addr, logger)
+
+	server.Handle("GET", "/", func(*Request) Response {
+		return Response{
+			Body: []byte("mini Go HTTP server\nTry GET /hello?name=Minh or POST /echo\n"),
+		}
+	})
+
+	server.Handle("GET", "/hello", func(request *Request) Response {
+		name := request.QueryValue("name")
+		if name == "" {
+			name = "world"
+		}
+		return Response{
+			Body: []byte(fmt.Sprintf("Hello, %s!\n", name)),
+		}
+	})
+
+	server.Handle("POST", "/echo", func(request *Request) Response {
+		body := make([]byte, len(request.Body)+1)
+		copy(body, request.Body)
+		body[len(request.Body)] = '\n'
+		return Response{
+			Status: 201,
+			Body:   body,
+		}
+	})
+
+	logger.Printf("listening on %s", addr)
+	if err := server.ListenAndServe(); err != nil {
+		logger.Fatal(err)
 	}
 }
