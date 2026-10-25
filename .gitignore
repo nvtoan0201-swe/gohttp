@@ -1,0 +1,9 @@
+# Compiled server binary
+/gohttp
+
+# Go test and coverage output
+*.test
+*.out
+
+# Local environment files
+.env
